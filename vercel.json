@@ -1,4 +1,11 @@
 {
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build:vercel",
+  "framework": "vite",
+  "env": {
+    "CONVEX_DEPLOY_KEY": "@convex_deploy_key",
+    "VITE_CONVEX_URL": "@vite_convex_url"
+  },
   "rewrites": [
     {
       "source": "/(.*)",

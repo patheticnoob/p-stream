@@ -20,9 +20,10 @@
       "@/*": ["./*"],
       "@sozialhelden/ietf-language-tags": [
         "../node_modules/@sozialhelden/ietf-language-tags/dist/cjs"
-      ]
+      ],
+      "@frontend/*": ["../frontend/*"]
     },
     "typeRoots": ["node_modules/@types"]
   },
-  "include": ["src"]
+  "include": ["src", "frontend"]
 }
