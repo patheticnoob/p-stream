@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { proxyUrlRequest } from "@frontend/api/proxy";
+
 export type Region =
   | "dallas"
   | "portland"
@@ -120,15 +122,22 @@ export async function detectRegion(): Promise<Region> {
 
   try {
     // Fallback to IP-based detection
-    const response = await fetch("https://ipapi.co/json/");
-    const data = await response.json();
+    const data = await proxyUrlRequest<{
+      latitude?: number;
+      longitude?: number;
+    }>({
+      url: "https://ipapi.co/json/",
+      cacheTtlMs: 1000 * 60 * 60 * 24,
+    });
 
     if (
       typeof data.latitude !== "number" ||
       typeof data.longitude !== "number"
     ) {
-      const backupResponse = await fetch("https://ipinfo.io/json");
-      const backupData = await backupResponse.json();
+      const backupData = await proxyUrlRequest<{ loc?: string }>({
+        url: "https://ipinfo.io/json",
+        cacheTtlMs: 1000 * 60 * 60 * 24,
+      });
 
       if (backupData.loc) {
         const [latitude, longitude] = backupData.loc.split(",").map(Number);
@@ -145,7 +154,10 @@ export async function detectRegion(): Promise<Region> {
       return "unknown";
     }
 
-    const detectedRegion = determineRegion(data);
+    const detectedRegion = determineRegion({
+      latitude: data.latitude,
+      longitude: data.longitude,
+    });
     if (!store.userPicked) {
       store.setRegion(detectedRegion);
     }

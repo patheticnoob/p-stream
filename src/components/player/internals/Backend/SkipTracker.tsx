@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSkipTimeSource } from "@/components/player/hooks/useSkipTime";
 import { useSkipTracking } from "@/components/player/hooks/useSkipTracking";
 import { usePlayerStore } from "@/stores/player/store";
+import { proxyRequest } from "@frontend/api/proxy";
 
 // Import SkipEvent type
 type SkipEvent = NonNullable<ReturnType<typeof useSkipTracking>["latestSkip"]>;
@@ -38,10 +39,11 @@ export function SkipTracker() {
   const sendSkipAnalytics = useCallback(
     async (skip: SkipEvent, adjustedConfidence: number) => {
       try {
-        await fetch("https://skips.pstream.mov/send", {
+        await proxyRequest({
+          target: "skipAnalytics",
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+          path: "/send",
+          body: {
             start_time: skip.startTime,
             end_time: skip.endTime,
             skip_duration: skip.skipDuration,
@@ -51,7 +53,8 @@ export function SkipTracker() {
             episode: meta?.episode?.number,
             confidence: adjustedConfidence,
             turnstile_token: turnstileToken ?? "",
-          }),
+          },
+          timeoutMs: 5000,
         });
       } catch (error) {
         console.error("Failed to send skip analytics:", error);

@@ -1,7 +1,6 @@
 import { ofetch } from "ofetch";
 
-import { getApiToken, setApiToken } from "@/backend/helpers/providerApi";
-import { getLoadbalancedProxyUrl } from "@/backend/providers/fetchers";
+import { proxyUrlRequest } from "@frontend/api/proxy";
 
 type P<T> = Parameters<typeof ofetch<T, any>>;
 type R<T> = ReturnType<typeof ofetch<T, any>>;
@@ -18,67 +17,50 @@ export function makeUrl(url: string, data: Record<string, string>) {
   return parsedUrl;
 }
 
+async function proxyCompatibleFetch<T>(
+  url: string,
+  ops: P<T>[1] = {},
+): Promise<T> {
+  const combined = new URL(url, ops.baseURL);
+  Object.entries((ops.params ?? {}) as Record<string, string>).forEach(
+    ([k, v]) => {
+      combined.searchParams.set(k, v);
+    },
+  );
+  Object.entries((ops.query ?? {}) as Record<string, string>).forEach(
+    ([k, v]) => {
+      combined.searchParams.set(k, v);
+    },
+  );
+
+  return proxyUrlRequest<T>({
+    url: combined.toString(),
+    method:
+      (ops.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | undefined) ??
+      "GET",
+    body: ops.body,
+    headers: (ops.headers as Record<string, string> | undefined) ?? undefined,
+    timeoutMs: 10000,
+    retries: 1,
+    cacheTtlMs: ops.method && ops.method !== "GET" ? undefined : 30_000,
+  });
+}
+
 export function mwFetch<T>(url: string, ops: P<T>[1] = {}): R<T> {
-  return baseFetch<T>(url, ops);
+  if (url.startsWith("/")) {
+    return baseFetch<T>(url, ops);
+  }
+  return proxyCompatibleFetch<T>(url, ops) as R<T>;
 }
 
 export async function singularProxiedFetch<T>(
-  proxyUrl: string,
+  _proxyUrl: string,
   url: string,
   ops: P<T>[1] = {},
 ): R<T> {
-  let combinedUrl = ops?.baseURL ?? "";
-  if (
-    combinedUrl.length > 0 &&
-    combinedUrl.endsWith("/") &&
-    url.startsWith("/")
-  )
-    combinedUrl += url.slice(1);
-  else if (
-    combinedUrl.length > 0 &&
-    !combinedUrl.endsWith("/") &&
-    !url.startsWith("/")
-  )
-    combinedUrl += `/${url}`;
-  else combinedUrl += url;
-
-  const parsedUrl = new URL(combinedUrl);
-  Object.entries(ops?.params ?? {}).forEach(([k, v]) => {
-    parsedUrl.searchParams.set(k, v);
-  });
-  Object.entries(ops?.query ?? {}).forEach(([k, v]) => {
-    parsedUrl.searchParams.set(k, v);
-  });
-
-  let headers = ops.headers ?? {};
-  const apiToken = await getApiToken();
-  if (apiToken)
-    headers = {
-      ...headers,
-      "X-Token": apiToken,
-    };
-
-  return baseFetch<T>(proxyUrl, {
-    ...ops,
-    baseURL: undefined,
-    params: {
-      destination: parsedUrl.toString(),
-    },
-    query: {},
-    headers,
-    onResponse(context) {
-      const tokenHeader = context.response.headers.get("X-Token");
-      if (tokenHeader) setApiToken(tokenHeader);
-
-      if (Array.isArray(ops.onResponse)) {
-        ops.onResponse.forEach((hook) => hook(context));
-      } else {
-        ops.onResponse?.(context);
-      }
-    },
-  });
+  return proxyCompatibleFetch<T>(url, ops) as R<T>;
 }
 
 export function proxiedFetch<T>(url: string, ops: P<T>[1] = {}): R<T> {
-  return singularProxiedFetch<T>(getLoadbalancedProxyUrl(), url, ops);
+  return proxyCompatibleFetch<T>(url, ops) as R<T>;
 }

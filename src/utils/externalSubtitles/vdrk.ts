@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { labelToLanguageCode } from "@p-stream/providers";
 
+import { mwFetch } from "@/backend/helpers/fetch";
 import { CaptionListItem } from "@/stores/player/slices/source";
 
 export async function scrapeVdrkCaptions(
@@ -23,13 +24,7 @@ export async function scrapeVdrkCaptions(
 
     console.log("Searching VDRK subtitles with URL:", url);
 
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`VDRK API returned ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await mwFetch<any[]>(url);
 
     // Check if response is an array
     if (!Array.isArray(data)) {
