@@ -111,7 +111,7 @@ export default defineConfig(({ mode }) => {
         typescript: true, // check typescript build errors in dev server
         eslint: {
           // check lint errors in dev server
-          lintCommand: "eslint --ext .tsx,.ts src",
+          lintCommand: "eslint --ext .tsx,.ts src frontend",
           dev: {
             logLevel: ["error"],
           },
@@ -166,6 +166,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        "@frontend": path.resolve(__dirname, "./frontend"),
         "@sozialhelden/ietf-language-tags": path.resolve(
           __dirname,
           "./node_modules/@sozialhelden/ietf-language-tags/dist/cjs",
