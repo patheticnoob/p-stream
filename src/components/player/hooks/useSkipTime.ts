@@ -13,7 +13,6 @@ const THE_INTRO_DB_BASE_URL = "https://api.theintrodb.org/v1";
 const FED_SKIPS_BASE_URL = "https://fed-skips.pstream.mov";
 // const VELORA_BASE_URL = "https://veloratv.ru/api/intro-end/confirmed";
 const INTRODB_BASE_URL = "https://api.introdb.app/intro";
-const MAX_RETRIES = 3;
 
 // Track the source of the current skip time (for analytics filtering)
 let currentSkipTimeSource:
@@ -160,7 +159,7 @@ export function useSkipTime() {
     //   }
     // };
 
-    const fetchFedSkipsTime = async (retries = 0): Promise<number | null> => {
+    const fetchFedSkipsTime = async (): Promise<number | null> => {
       if (!meta?.imdbId || meta.type === "movie") return null;
       if (!conf().ALLOW_FEBBOX_KEY) return null;
       if (!febboxKey) return null;
@@ -173,20 +172,11 @@ export function useSkipTime() {
         );
         if (!turnstileToken) return null;
 
-        const response = await fetch(apiUrl, {
+        const data = await mwFetch<any>(apiUrl, {
           headers: {
             "cf-turnstile-response": turnstileToken,
           },
         });
-
-        if (!response.ok) {
-          if (response.status === 500 && retries < MAX_RETRIES) {
-            return fetchFedSkipsTime(retries + 1);
-          }
-          throw new Error("Fed-skips API request failed");
-        }
-
-        const data = await response.json();
 
         const parseSkipTime = (timeStr: string | undefined): number | null => {
           if (!timeStr || typeof timeStr !== "string") return null;

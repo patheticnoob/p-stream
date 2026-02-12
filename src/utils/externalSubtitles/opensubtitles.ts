@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { labelToLanguageCode } from "@p-stream/providers";
 
+import { mwFetch } from "@/backend/helpers/fetch";
 import { CaptionListItem } from "@/stores/player/slices/source";
 
 export async function scrapeOpenSubtitlesCaptions(
@@ -13,17 +14,11 @@ export async function scrapeOpenSubtitlesCaptions(
       season && episode ? `episode-${episode}/` : ""
     }imdbid-${imdbId.slice(2)}${season && episode ? `/season-${season}` : ""}`;
 
-    const response = await fetch(url, {
+    const data = await mwFetch<any[]>(url, {
       headers: {
         "X-User-Agent": "VLSub 0.10.2",
       },
     });
-
-    if (!response.ok) {
-      throw new Error(`OpenSubtitles API returned ${response.status}`);
-    }
-
-    const data = await response.json();
     const openSubtitlesCaptions: CaptionListItem[] = [];
 
     for (const caption of data) {

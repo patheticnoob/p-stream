@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { labelToLanguageCode } from "@p-stream/providers";
 
+import { mwFetch } from "@/backend/helpers/fetch";
 import { CaptionListItem } from "@/stores/player/slices/source";
 
 export async function scrapeFebboxCaptions(
@@ -18,13 +19,7 @@ export async function scrapeFebboxCaptions(
 
     // console.log("Searching Febbox subtitles with URL:", url);
 
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`Febbox API returned ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await mwFetch<any>(url);
 
     // Check for error response
     if (data.error) {
