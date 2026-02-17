@@ -65,18 +65,12 @@ export async function fetchFebboxQuota(febboxKey: string | null): Promise<any> {
 
   console.log("SetupPart.tsx: Fetching Febbox quota");
   try {
-    const response = await fetch("https://fed-api.pstream.mov/quota", {
+    const data = await proxiedFetch<any>("https://fed-api.pstream.mov/quota", {
       headers: {
         "ui-token": febboxKey,
       },
     });
 
-    if (!response.ok) {
-      console.error("Febbox quota API failed with status:", response.status);
-      return null;
-    }
-
-    const data = await response.json();
     console.log("SetupPart.tsx: Febbox quota fetched successfully");
     return data;
   } catch (error) {
@@ -100,28 +94,12 @@ export async function testFebboxKey(febboxKey: string | null): Promise<Status> {
       `Attempt ${attempts + 1} of ${maxAttempts} to check Febbox token`,
     );
     try {
-      const response = await fetch(febboxApiTestUrl, {
+      const data = await proxiedFetch<any>(febboxApiTestUrl, {
         headers: {
           "ui-token": febboxKey,
         },
       });
 
-      if (!response.ok) {
-        console.error("Febbox API test failed with status:", response.status);
-        if (response.status === 503 || response.status === 502) {
-          return "api_down";
-        }
-        attempts += 1;
-        if (attempts === maxAttempts) {
-          console.log("Max attempts reached, returning error");
-          return "invalid_token";
-        }
-        console.log("Retrying after failed response...");
-        await sleep(3000);
-        continue;
-      }
-
-      const data = (await response.json()) as any;
       if (!data || !data.streams) {
         console.error("Invalid response format from Febbox API:", data);
         attempts += 1;
