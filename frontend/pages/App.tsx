@@ -41,6 +41,7 @@ import { OnboardingProxyPage } from "@/pages/onboarding/OnboardingProxy";
 import { RegisterPage } from "@/pages/Register";
 import { SupportPage } from "@/pages/Support";
 import { Layout } from "@/setup/Layout";
+import { useAuthStore } from "@/stores/auth";
 import { useHistoryListener } from "@/stores/history";
 import { useClearModalsOnNavigation } from "@/stores/interface/overlayStack";
 import { LanguageProvider } from "@/stores/language";
@@ -102,6 +103,11 @@ function QueryView() {
 }
 
 export const maintenanceTime = "March 31th 11:00 PM - 5:00 AM EST";
+
+function AuthenticatedRoute({ children }: { children: ReactElement }) {
+  const isAuthenticated = Boolean(useAuthStore((s) => s.account?.token));
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
 
 function App() {
   useHistoryListener();
@@ -172,14 +178,23 @@ function App() {
           />
           <Route path="/onboarding/proxy" element={<OnboardingProxyPage />} />
 
-          {/* Migration pages - awaiting import and export fixes */}
-          <Route path="/migration" element={<MigrationPage />} />
-          <Route path="/migration/direct" element={<MigrationDirectPage />} />
-          <Route
-            path="/migration/download"
-            element={<MigrationDownloadPage />}
-          />
-          <Route path="/migration/upload" element={<MigrationUploadPage />} />
+          {import.meta.env.VITE_ENABLE_ACCOUNT_MIGRATION === "true" ? (
+            <>
+              <Route path="/migration" element={<MigrationPage />} />
+              <Route
+                path="/migration/direct"
+                element={<MigrationDirectPage />}
+              />
+              <Route
+                path="/migration/download"
+                element={<MigrationDownloadPage />}
+              />
+              <Route
+                path="/migration/upload"
+                element={<MigrationUploadPage />}
+              />
+            </>
+          ) : null}
 
           {shouldHaveLegalPage() ? (
             <Route path="/legal" element={<LegalPage />} />
@@ -205,9 +220,11 @@ function App() {
           <Route
             path="/settings"
             element={
-              <Suspense fallback={null}>
-                <SettingsPage />
-              </Suspense>
+              <AuthenticatedRoute>
+                <Suspense fallback={null}>
+                  <SettingsPage />
+                </Suspense>
+              </AuthenticatedRoute>
             }
           />
           {/* admin routes */}
