@@ -1,3 +1,4 @@
+/** @deprecated Legacy backend account API. Use Convex auth/profile APIs instead. */
 import { ofetch } from "ofetch";
 
 export interface SessionResponse {

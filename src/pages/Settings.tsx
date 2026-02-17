@@ -8,9 +8,7 @@ import {
   decryptData,
   encryptData,
 } from "@/backend/accounts/crypto";
-import { getSessions, updateSession } from "@/backend/accounts/sessions";
 import { getSettings, updateSettings } from "@/backend/accounts/settings";
-import { editUser } from "@/backend/accounts/user";
 import { getAllProviders } from "@/backend/providers/providers";
 import { Button } from "@/components/buttons/Button";
 import { SearchBarInput } from "@/components/form/SearchBar";
@@ -41,6 +39,10 @@ import { usePreferencesStore } from "@/stores/preferences";
 import { useSubtitleStore } from "@/stores/subtitles";
 import { usePreviewThemeStore, useThemeStore } from "@/stores/theme";
 import { scrollToElement, scrollToHash } from "@/utils/scroll";
+import {
+  fetchCurrentUser,
+  updateCurrentUserProfile,
+} from "@frontend/api/users";
 
 import { SubPageLayout } from "./layouts/SubPageLayout";
 import { AppInfoPart } from "./parts/settings/AppInfoPart";
@@ -130,12 +132,21 @@ export function AccountSettings(props: {
   userIcon: UserIcons;
   setUserIcon: (s: UserIcons) => void;
 }) {
-  const url = useBackendUrl();
   const { account } = props;
-  const [sessionsResult, execSessions] = useAsyncFn(() => {
-    if (!url) return Promise.resolve([]);
-    return getSessions(url, account);
-  }, [account, url]);
+  const [sessionsResult, execSessions] = useAsyncFn(async () => {
+    const user = await fetchCurrentUser().catch(() => null);
+    if (!user?.currentDevice) return [];
+    return [
+      {
+        id: user.currentDevice.deviceId,
+        userId: account.userId,
+        createdAt: new Date(user.createdAt).toISOString(),
+        accessedAt: new Date(user.currentDevice.lastSeenAt).toISOString(),
+        device: user.currentDevice.deviceName,
+        userAgent: user.currentDevice.userAgent ?? "",
+      },
+    ];
+  }, [account.userId]);
   useEffect(() => {
     execSessions();
   }, [execSessions]);
@@ -616,33 +627,34 @@ export function SettingsPage() {
   const saveChanges = useCallback(async () => {
     if (account && backendUrl) {
       if (
-        state.appLanguage.changed ||
-        state.theme.changed ||
-        state.proxyUrls.changed ||
-        state.febboxKey.changed ||
-        state.debridToken.changed ||
-        state.debridService.changed ||
-        state.enableThumbnails.changed ||
-        state.enableAutoplay.changed ||
-        state.enableSkipCredits.changed ||
-        state.enableDiscover.changed ||
-        state.enableFeatured.changed ||
-        state.enableDetailsModal.changed ||
-        state.enableImageLogos.changed ||
-        state.sourceOrder.changed ||
-        state.enableSourceOrder.changed ||
-        state.lastSuccessfulSource.changed ||
-        state.enableLastSuccessfulSource.changed ||
-        state.proxyTmdb.changed ||
-        state.enableCarouselView.changed ||
-        state.enableMinimalCards.changed ||
-        state.forceCompactEpisodeView.changed ||
-        state.enableLowPerformanceMode.changed ||
-        state.enableHoldToBoost.changed ||
-        state.homeSectionOrder.changed ||
-        state.manualSourceSelection.changed ||
-        state.enableDoubleClickToSeek.changed ||
-        state.enableAutoResumeOnPlaybackError
+        backendUrl &&
+        (state.appLanguage.changed ||
+          state.theme.changed ||
+          state.proxyUrls.changed ||
+          state.febboxKey.changed ||
+          state.debridToken.changed ||
+          state.debridService.changed ||
+          state.enableThumbnails.changed ||
+          state.enableAutoplay.changed ||
+          state.enableSkipCredits.changed ||
+          state.enableDiscover.changed ||
+          state.enableFeatured.changed ||
+          state.enableDetailsModal.changed ||
+          state.enableImageLogos.changed ||
+          state.sourceOrder.changed ||
+          state.enableSourceOrder.changed ||
+          state.lastSuccessfulSource.changed ||
+          state.enableLastSuccessfulSource.changed ||
+          state.proxyTmdb.changed ||
+          state.enableCarouselView.changed ||
+          state.enableMinimalCards.changed ||
+          state.forceCompactEpisodeView.changed ||
+          state.enableLowPerformanceMode.changed ||
+          state.enableHoldToBoost.changed ||
+          state.homeSectionOrder.changed ||
+          state.manualSourceSelection.changed ||
+          state.enableDoubleClickToSeek.changed ||
+          state.enableAutoResumeOnPlaybackError)
       ) {
         await updateSettings(backendUrl, account, {
           applicationLanguage: state.appLanguage.state,
@@ -675,26 +687,34 @@ export function SettingsPage() {
             state.enableAutoResumeOnPlaybackError.state,
         });
       }
+      if (
+        state.deviceName.changed ||
+        state.nickname.changed ||
+        state.profile.changed
+      ) {
+        await updateCurrentUserProfile({
+          deviceName: state.deviceName.changed
+            ? state.deviceName.state
+            : undefined,
+          nickname: state.nickname.changed ? state.nickname.state : undefined,
+          profile: state.profile.changed
+            ? (state.profile.state ?? undefined)
+            : undefined,
+          platform: navigator.platform,
+          userAgent: navigator.userAgent,
+        });
+      }
       if (state.deviceName.changed) {
         const newDeviceName = await encryptData(
           state.deviceName.state,
           base64ToBuffer(account.seed),
         );
-        await updateSession(backendUrl, account, {
-          deviceName: newDeviceName,
-        });
         updateDeviceName(newDeviceName);
       }
       if (state.nickname.changed) {
-        await editUser(backendUrl, account, {
-          nickname: state.nickname.state,
-        });
         updateNickname(state.nickname.state);
       }
       if (state.profile.changed && state.profile.state) {
-        await editUser(backendUrl, account, {
-          profile: state.profile.state,
-        });
         updateProfile(state.profile.state);
       }
     }

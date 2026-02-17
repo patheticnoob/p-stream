@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 
 const AUTH_CHECK_INTERVAL = 12 * 60 * 60 * 1000;
 
+/** @deprecated Legacy restore hook, kept for backward compatibility during Convex auth migration. */
 export function useAuthRestore() {
   const { account } = useAuthStore();
   const { restore } = useAuth();

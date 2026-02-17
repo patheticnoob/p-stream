@@ -18,6 +18,7 @@ import { useProgressStore } from "@/stores/progress";
 import { useSubtitleStore } from "@/stores/subtitles";
 import { useThemeStore } from "@/stores/theme";
 
+/** @deprecated Legacy backend auth-data sync hook. */
 export function useAuthData() {
   const loggedIn = !!useAuthStore((s) => s.account);
   const setAccount = useAuthStore((s) => s.setAccount);

@@ -1,6 +1,7 @@
 import { conf } from "@/setup/config";
 import { useAuthStore } from "@/stores/auth";
 
+/** @deprecated Legacy backend URL selector. */
 export function useBackendUrl(): string | null {
   const backendUrl = useAuthStore((s) => s.backendUrl);
   const config = conf();

@@ -73,16 +73,19 @@ export function DeviceListPart(props: {
   const sessions = props.sessions;
   const currentSessionId = useAuthStore((s) => s.account?.sessionId);
   const deviceListSorted = useMemo(() => {
-    if (!seed) return [];
     let list = sessions.map((session) => {
-      let decryptedName: string;
-      try {
-        decryptedName = decryptData(session.device, base64ToBuffer(seed));
-      } catch (error) {
-        console.warn(
-          `Failed to decrypt device name for session ${session.id}:`,
-          error,
-        );
+      let decryptedName = session.device;
+      if (seed) {
+        try {
+          decryptedName = decryptData(session.device, base64ToBuffer(seed));
+        } catch (error) {
+          console.warn(
+            `Failed to decrypt device name for session ${session.id}:`,
+            error,
+          );
+        }
+      }
+      if (!decryptedName) {
         decryptedName = t("settings.account.devices.unknownDevice");
       }
       return {
@@ -98,8 +101,6 @@ export function DeviceListPart(props: {
     });
     return list;
   }, [seed, sessions, currentSessionId, t]);
-  if (!seed) return null;
-
   return (
     <div>
       <Heading2 border className="mt-0 mb-9">
