@@ -1,19 +1,17 @@
 import { useEffect, useRef } from "react";
 
-import { updateGroupOrder } from "@/backend/accounts/groupOrder";
-import { useBackendUrl } from "@/hooks/auth/useBackendUrl";
-import { useAuthStore } from "@/stores/auth";
+import { updateGroupOrderConvex } from "@frontend/api";
+import { useConvexAuth } from "@frontend/hooks/useConvexAuth";
 import { useGroupOrderStore } from "@/stores/groupOrder";
 
 const syncIntervalMs = 5 * 1000;
 
 export function GroupSyncer() {
-  const url = useBackendUrl();
   const groupOrder = useGroupOrderStore((s) => s.groupOrder);
   const lastSyncedOrder = useRef<string[]>([]);
   const isInitialized = useRef(false);
+  const convexAuth = useConvexAuth();
 
-  // Initialize lastSyncedOrder on first render
   useEffect(() => {
     if (!isInitialized.current) {
       lastSyncedOrder.current = [...groupOrder];
@@ -23,33 +21,21 @@ export function GroupSyncer() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      (async () => {
-        if (!url) return;
+      if (!convexAuth.isAuthenticated) return;
+      const currentOrder = useGroupOrderStore.getState().groupOrder;
+      const hasChanged = JSON.stringify(currentOrder) !== JSON.stringify(lastSyncedOrder.current);
 
-        const user = useAuthStore.getState();
-        if (!user.account) return; // not logged in, dont sync to server
-
-        // Check if group order has changed since last sync
-        const currentOrder = useGroupOrderStore.getState().groupOrder;
-        const hasChanged =
-          JSON.stringify(currentOrder) !==
-          JSON.stringify(lastSyncedOrder.current);
-
-        if (hasChanged) {
-          try {
-            await updateGroupOrder(url, user.account, currentOrder);
+      if (hasChanged) {
+        updateGroupOrderConvex(currentOrder)
+          .then(() => {
             lastSyncedOrder.current = [...currentOrder];
-          } catch (err) {
-            console.error("Failed to sync group order:", err);
-          }
-        }
-      })();
+          })
+          .catch((err) => console.error("Failed to sync group order:", err));
+      }
     }, syncIntervalMs);
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [url]);
+    return () => clearInterval(interval);
+  }, [convexAuth.isAuthenticated]);
 
   return null;
 }

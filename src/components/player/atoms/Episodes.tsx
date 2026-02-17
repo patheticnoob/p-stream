@@ -1,6 +1,8 @@
 import classNames from "classnames";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import { recordWatchHistoryEvent, upsertWatchProgress } from "@frontend/api";
 import { useAsync } from "react-use";
 
 import { getMetaFromId } from "@/backend/metadata/getmeta";
@@ -713,6 +715,9 @@ export function EpisodesView({
           // If watched (>90%), reset to 0%, otherwise set to 100%
           const isWatched = percentage > 90;
 
+          const watchedSeconds = isWatched ? 0 : 60;
+          const durationSeconds = 60;
+
           updateItem({
             meta: {
               tmdbId: meta.tmdbId,
@@ -732,10 +737,34 @@ export function EpisodesView({
               },
             },
             progress: {
-              watched: isWatched ? 0 : 60,
-              duration: 60,
+              watched: watchedSeconds,
+              duration: durationSeconds,
             },
           });
+
+          upsertWatchProgress({
+            mediaType: "show",
+            tmdbId: meta.tmdbId,
+            seasonId: selectedSeason,
+            seasonNumber: loadingState.value.season.number,
+            episodeId,
+            episodeNumber: episode.number,
+            watchedSeconds,
+            durationSeconds,
+          }).catch((error) => console.error("Failed to toggle episode watch", error));
+
+          recordWatchHistoryEvent({
+            mediaType: "show",
+            tmdbId: meta.tmdbId,
+            seasonId: selectedSeason,
+            seasonNumber: loadingState.value.season.number,
+            episodeId,
+            episodeNumber: episode.number,
+            event: watchedSeconds > 0 ? "complete" : "play",
+            watchedSeconds,
+            durationSeconds,
+            context: "episode-toggle",
+          }).catch(() => undefined);
         }
       }
     },
