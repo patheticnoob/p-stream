@@ -26,11 +26,24 @@ const HOST_TARGET_MAP: Record<string, string> = {
   "ipinfo.io": "ipinfo",
 };
 
+function getCorrelationId() {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `cid-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function getAuthContext() {
   return {
+    origin: typeof window !== "undefined" ? window.location.origin : undefined,
     referer: typeof window !== "undefined" ? window.location.href : undefined,
     userAgent:
       typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+    correlationId: getCorrelationId(),
   };
 }
 
@@ -65,11 +78,17 @@ export async function proxyRequest(input: {
   retries?: number;
   cacheTtlMs?: number;
 }) {
+  const auth = getAuthContext();
+
   return requireConvexClient().action(
     "proxy:request" as never,
     {
       method: input.method ?? "GET",
-      auth: getAuthContext(),
+      auth,
+      headers: {
+        ...(input.headers ?? {}),
+        "x-correlation-id": auth.correlationId,
+      },
       ...input,
     } as never,
   );
@@ -85,7 +104,7 @@ export async function proxyUrlRequest<T = unknown>(input: {
   cacheTtlMs?: number;
 }): Promise<T> {
   const { target, path } = resolveTargetFromUrl(input.url);
-  const response = await proxyRequest({
+  const response: any = await proxyRequest({
     target,
     path,
     params: paramsFromUrl(input.url),

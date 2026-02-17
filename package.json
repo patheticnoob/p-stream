@@ -18,7 +18,7 @@
     "preinstall": "npx -y only-allow pnpm",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy --cmd \"pnpm build\"",
-    "build:vercel": "pnpm build && pnpm convex:deploy"
+    "build:vercel": "pnpm convex:deploy && pnpm build"
   },
   "browserslist": {
     "production": [

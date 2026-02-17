@@ -59,3 +59,14 @@ git push  # Push to YOUR repository
 ## Contact Me / Discord
 
 [Discord](https://discord.gg/7z6znYgrTG)
+
+## Convex + Vercel Environment Setup
+
+For Vercel/CI deployments, configure these environment variables:
+
+- Public runtime: `NEXT_PUBLIC_CONVEX_URL`
+- Convex server-only: `CONVEX_DEPLOYMENT`, `CONVEX_DEPLOY_KEY`, `TMDB_READ_API_KEY`, `BACKEND_URL`, `CORS_PROXY_URL`, `M3U8_PROXY_URL`, `ALLOWED_ORIGINS`
+
+Do not expose API keys or internal proxy/backend URLs through `VITE_*` variables.
+
+The CI workflow deploys Convex before deploying the frontend to Vercel.
