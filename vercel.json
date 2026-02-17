@@ -4,7 +4,8 @@
   "framework": "vite",
   "env": {
     "CONVEX_DEPLOY_KEY": "@convex_deploy_key",
-    "VITE_CONVEX_URL": "@vite_convex_url"
+    "CONVEX_DEPLOYMENT": "@convex_deployment",
+    "NEXT_PUBLIC_CONVEX_URL": "@next_public_convex_url"
   },
   "rewrites": [
     {

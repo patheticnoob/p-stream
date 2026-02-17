@@ -1,6 +1,8 @@
 import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+import { getServerConfig } from "./serverConfig";
+
 const ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 type AllowedMethod = (typeof ALLOWED_METHODS)[number];
 
@@ -11,6 +13,7 @@ type ProxyTargetConfig = {
   includeCookies?: boolean;
   includeReferer?: boolean;
   includeUserAgent?: boolean;
+  includeCorrelationId?: boolean;
   defaultHeaders?: Record<string, string>;
 };
 
@@ -86,6 +89,7 @@ const TARGETS: Record<string, ProxyTargetConfig> = {
     includeCookies: true,
     includeReferer: true,
     includeUserAgent: true,
+    includeCorrelationId: true,
   },
 };
 
@@ -112,6 +116,29 @@ function buildUrl(
   return url;
 }
 
+function withTmdbAuthorization(
+  config: ProxyTargetConfig,
+  target: string,
+): ProxyTargetConfig {
+  if (target !== "tmdb" && target !== "tmdbAlt") {
+    return config;
+  }
+
+  const tmdbReadApiKey = getServerConfig().tmdbReadApiKey;
+  if (!tmdbReadApiKey) {
+    return config;
+  }
+
+  return {
+    ...config,
+    defaultHeaders: {
+      ...(config.defaultHeaders ?? {}),
+      Authorization: `Bearer ${tmdbReadApiKey}`,
+      Accept: "application/json",
+    },
+  };
+}
+
 async function fetchWithRetry(
   input: RequestInfo | URL,
   init: RequestInit,
@@ -132,6 +159,13 @@ async function fetchWithRetry(
   throw lastError;
 }
 
+function isOriginAllowed(origin: string | undefined): boolean {
+  const allowedOrigins = getServerConfig().allowedOrigins;
+  if (allowedOrigins.length === 0) return true;
+  if (!origin) return false;
+  return allowedOrigins.includes(origin);
+}
+
 export const request = action({
   args: {
     target: v.string(),
@@ -150,8 +184,10 @@ export const request = action({
       v.object({
         token: v.optional(v.string()),
         cookies: v.optional(v.string()),
+        origin: v.optional(v.string()),
         referer: v.optional(v.string()),
         userAgent: v.optional(v.string()),
+        correlationId: v.optional(v.string()),
       }),
     ),
     timeoutMs: v.optional(v.number()),
@@ -159,14 +195,28 @@ export const request = action({
     cacheTtlMs: v.optional(v.number()),
   },
   handler: async (_ctx, args) => {
-    const config = TARGETS[args.target];
-    if (!config) {
+    const requestStartedAt = Date.now();
+    const correlationId =
+      args.auth?.correlationId ??
+      args.headers?.["x-correlation-id"] ??
+      "missing-correlation-id";
+
+    const targetConfig = TARGETS[args.target];
+    if (!targetConfig) {
       throw new Error(`Proxy target '${args.target}' is not allowlisted.`);
     }
+
+    const config = withTmdbAuthorization(targetConfig, args.target);
 
     if (!config.methods.includes(args.method)) {
       throw new Error(
         `Method ${args.method} is not allowed for target '${args.target}'.`,
+      );
+    }
+
+    if (!isOriginAllowed(args.auth?.origin)) {
+      throw new Error(
+        `Origin '${args.auth?.origin ?? "unknown"}' is not allowed.`,
       );
     }
 
@@ -176,6 +226,13 @@ export const request = action({
     if (args.cacheTtlMs && args.method === "GET") {
       const cached = cache.get(cacheKey);
       if (cached && cached.expiresAt > Date.now()) {
+        console.log("[proxy] cache-hit", {
+          correlationId,
+          target: args.target,
+          method: args.method,
+          url: url.toString(),
+          latencyMs: Date.now() - requestStartedAt,
+        });
         return cached.value;
       }
     }
@@ -193,6 +250,8 @@ export const request = action({
       headers.set("Referer", args.auth.referer);
     if (config.includeUserAgent && args.auth?.userAgent)
       headers.set("User-Agent", args.auth.userAgent);
+    if (config.includeCorrelationId)
+      headers.set("x-correlation-id", correlationId);
 
     if (args.body && !headers.has("content-type")) {
       headers.set("content-type", "application/json");
@@ -231,6 +290,27 @@ export const request = action({
         data,
       };
 
+      const latencyMs = Date.now() - requestStartedAt;
+      if (!response.ok) {
+        console.error("[proxy] upstream-error", {
+          correlationId,
+          target: args.target,
+          method: args.method,
+          status: response.status,
+          latencyMs,
+          url: response.url,
+        });
+      } else {
+        console.log("[proxy] upstream-ok", {
+          correlationId,
+          target: args.target,
+          method: args.method,
+          status: response.status,
+          latencyMs,
+          url: response.url,
+        });
+      }
+
       if (args.cacheTtlMs && args.method === "GET" && response.ok) {
         cache.set(cacheKey, {
           expiresAt: Date.now() + args.cacheTtlMs,
@@ -239,6 +319,15 @@ export const request = action({
       }
 
       return normalized;
+    } catch (error) {
+      console.error("[proxy] request-failed", {
+        correlationId,
+        target: args.target,
+        method: args.method,
+        latencyMs: Date.now() - requestStartedAt,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
     } finally {
       clearTimeout(timeout);
     }
