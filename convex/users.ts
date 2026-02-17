@@ -16,6 +16,25 @@ async function requireUser(ctx: any) {
   return user;
 }
 
+const safeSettingsValidator = v.object({
+  language: v.optional(v.string()),
+  theme: v.optional(v.union(v.string(), v.null())),
+  autoplay: v.optional(v.boolean()),
+  subtitles: v.optional(
+    v.object({
+      language: v.optional(v.string()),
+      native: v.optional(v.boolean()),
+    }),
+  ),
+  accessibility: v.optional(
+    v.object({
+      lowPerformanceMode: v.optional(v.boolean()),
+      holdToBoost: v.optional(v.boolean()),
+      doubleClickToSeek: v.optional(v.boolean()),
+    }),
+  ),
+});
+
 export const me = query({
   args: {},
   handler: async (ctx) => {
@@ -26,6 +45,28 @@ export const me = query({
       .query("users")
       .withIndex("by_external_id", (q) => q.eq("externalId", identity.subject))
       .first();
+  },
+});
+
+export const getSafeSettings = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    return user.safeSettings ?? {};
+  },
+});
+
+export const updateSafeSettings = mutation({
+  args: {
+    settings: safeSettingsValidator,
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    await ctx.db.patch(user._id, {
+      safeSettings: args.settings,
+      updatedAt: Date.now(),
+    });
+    return args.settings;
   },
 });
 
@@ -66,7 +107,6 @@ export const updateProfile = mutation({
     return ctx.db.get(user._id);
   },
 });
-
 
 export const updateGroupOrder = mutation({
   args: {

@@ -91,6 +91,9 @@ export const useAuthStore = create(
     })),
     {
       name: "__MW::auth",
+      partialize: (state) => ({
+        account: state.account,
+      }),
     },
   ),
 );

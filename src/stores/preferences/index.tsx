@@ -69,6 +69,43 @@ export interface PreferencesStore {
   setKeyboardShortcuts(v: KeyboardShortcuts): void;
 }
 
+const PERSISTED_PREFERENCE_KEYS = [
+  "enableThumbnails",
+  "enableAutoplay",
+  "enableSkipCredits",
+  "enableDiscover",
+  "enableFeatured",
+  "enableDetailsModal",
+  "enableImageLogos",
+  "enableCarouselView",
+  "enableMinimalCards",
+  "forceCompactEpisodeView",
+  "enableLowPerformanceMode",
+  "enableNativeSubtitles",
+  "enableHoldToBoost",
+  "homeSectionOrder",
+  "manualSourceSelection",
+  "enableDoubleClickToSeek",
+  "enableAutoResumeOnPlaybackError",
+  "keyboardShortcuts",
+] as const;
+
+function sanitizePersistedPreferences(
+  value: unknown,
+): Partial<PreferencesStore> {
+  if (!value || typeof value !== "object") return {};
+
+  const parsed = value as Record<string, unknown>;
+  const clean: Partial<PreferencesStore> = {};
+
+  for (const key of PERSISTED_PREFERENCE_KEYS) {
+    if (!(key in parsed)) continue;
+    clean[key] = parsed[key] as never;
+  }
+
+  return clean;
+}
+
 export const usePreferencesStore = create(
   persist(
     immer<PreferencesStore>((set) => ({
@@ -254,6 +291,12 @@ export const usePreferencesStore = create(
     })),
     {
       name: "__MW::preferences",
+      partialize: (state) =>
+        sanitizePersistedPreferences(state) as Partial<PreferencesStore>,
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...sanitizePersistedPreferences(persistedState),
+      }),
     },
   ),
 );

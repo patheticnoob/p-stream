@@ -31,29 +31,35 @@ export function AdminPage() {
     }
   }, [embedOrderState]);
 
+  const isInternalBuild = import.meta.env.DEV;
+
   return (
     <SubPageLayout>
       <ThinContainer>
         <Heading1>Admin tools</Heading1>
         <Paragraph>Silly tools used test P-Stream! ૮₍´˶• . • ⑅ ₎ა</Paragraph>
 
-        <ConfigValuesPart />
-        <BackendTestPart />
-        <WorkerTestPart />
-        <TMDBTestPart />
-        <M3U8TestPart />
-        <EmbedOrderPart
-          embedOrder={embedOrderState.embedOrder}
-          setEmbedOrder={embedOrderState.setEmbedOrder}
-          enableEmbedOrder={embedOrderState.enableEmbedOrder}
-          setEnableEmbedOrder={embedOrderState.setEnableEmbedOrder}
-        />
+        {isInternalBuild ? (
+          <>
+            <ConfigValuesPart />
+            <BackendTestPart />
+            <WorkerTestPart />
+            <TMDBTestPart />
+            <M3U8TestPart />
+            <EmbedOrderPart
+              embedOrder={embedOrderState.embedOrder}
+              setEmbedOrder={embedOrderState.setEmbedOrder}
+              enableEmbedOrder={embedOrderState.enableEmbedOrder}
+              setEnableEmbedOrder={embedOrderState.setEnableEmbedOrder}
+            />
+          </>
+        ) : null}
         {/* <ProgressCleanupPart /> */}
       </ThinContainer>
 
       <Transition
         animation="fade"
-        show={embedOrderState.hasChanges}
+        show={isInternalBuild && embedOrderState.hasChanges}
         className="bg-settings-saveBar-background border-t border-settings-card-border/50 py-4 transition-opacity w-full fixed bottom-0 flex justify-between flex-col md:flex-row px-8 items-start md:items-center gap-3 z-[999]"
       >
         <p className="text-type-danger">{t("settings.unsaved")}</p>
