@@ -1,6 +1,15 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const mediaIdentity = {
+  mediaType: v.union(v.literal("movie"), v.literal("show")),
+  tmdbId: v.string(),
+  seasonId: v.optional(v.string()),
+  seasonNumber: v.optional(v.number()),
+  episodeId: v.optional(v.string()),
+  episodeNumber: v.optional(v.number()),
+};
+
 export default defineSchema({
   users: defineTable({
     externalId: v.string(),
@@ -11,6 +20,7 @@ export default defineSchema({
       colorB: v.string(),
       icon: v.string(),
     }),
+    groupOrder: v.optional(v.array(v.string())),
     currentDevice: v.optional(
       v.object({
         deviceId: v.string(),
@@ -34,10 +44,33 @@ export default defineSchema({
   }).index("by_user", ["userId"]),
   watchProgress: defineTable({
     userId: v.id("users"),
-    mediaId: v.string(),
-    progress: v.number(),
+    ...mediaIdentity,
+    watchedSeconds: v.number(),
+    durationSeconds: v.number(),
+    percent: v.number(),
+    completed: v.boolean(),
     updatedAt: v.number(),
-  }).index("by_user_media", ["userId", "mediaId"]),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_media", ["userId", "mediaType", "tmdbId"])
+    .index("by_user_media_episode", ["userId", "mediaType", "tmdbId", "seasonId", "episodeId"]),
+  watchHistory: defineTable({
+    userId: v.id("users"),
+    ...mediaIdentity,
+    event: v.union(v.literal("play"), v.literal("resume"), v.literal("complete")),
+    watchedSeconds: v.optional(v.number()),
+    durationSeconds: v.optional(v.number()),
+    percent: v.optional(v.number()),
+    timestamp: v.number(),
+    context: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
+  favorites: defineTable({
+    userId: v.id("users"),
+    ...mediaIdentity,
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_media", ["userId", "mediaType", "tmdbId", "seasonId", "episodeId"]),
   proxy: defineTable({
     key: v.string(),
     value: v.string(),

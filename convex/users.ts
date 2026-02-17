@@ -66,3 +66,18 @@ export const updateProfile = mutation({
     return ctx.db.get(user._id);
   },
 });
+
+
+export const updateGroupOrder = mutation({
+  args: {
+    groupOrder: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    await ctx.db.patch(user._id, {
+      groupOrder: args.groupOrder,
+      updatedAt: Date.now(),
+    });
+    return ctx.db.get(user._id);
+  },
+});

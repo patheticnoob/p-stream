@@ -1,49 +1,26 @@
 import { useEffect } from "react";
 
-import { addBookmark, removeBookmark } from "@/backend/accounts/bookmarks";
-import { useBackendUrl } from "@/hooks/auth/useBackendUrl";
-import { AccountWithToken, useAuthStore } from "@/stores/auth";
+import { removeFavorite, upsertFavorite } from "@frontend/api";
+import { useConvexAuth } from "@frontend/hooks/useConvexAuth";
 import { BookmarkUpdateItem, useBookmarkStore } from "@/stores/bookmarks";
 
 const syncIntervalMs = 5 * 1000;
 
-async function syncBookmarks(
-  items: BookmarkUpdateItem[],
-  finish: (id: string) => void,
-  url: string,
-  account: AccountWithToken | null,
-) {
+async function syncBookmarks(items: BookmarkUpdateItem[], finish: (id: string) => void) {
   for (const item of items) {
-    // complete it beforehand so it doesn't get handled while in progress
     finish(item.id);
-
-    if (!account) continue; // not logged in, dont sync to server
 
     try {
       if (item.action === "delete") {
-        await removeBookmark(url, account, item.tmdbId);
+        await removeFavorite({ mediaType: item.type === "show" ? "show" : "movie", tmdbId: item.tmdbId });
         continue;
       }
 
       if (item.action === "add") {
-        await addBookmark(url, account, {
-          meta: {
-            poster: item.poster,
-            title: item.title ?? "",
-            type: item.type ?? "",
-            year: item.year ?? NaN,
-          },
-          tmdbId: item.tmdbId,
-          group: item.group,
-          favoriteEpisodes: item.favoriteEpisodes,
-        });
-        continue;
+        await upsertFavorite({ mediaType: item.type === "show" ? "show" : "movie", tmdbId: item.tmdbId });
       }
     } catch (err) {
-      console.error(
-        `Failed to sync bookmark: ${item.tmdbId} - ${item.action}`,
-        err,
-      );
+      console.error(`Failed to sync bookmark: ${item.tmdbId} - ${item.action}`, err);
     }
   }
 }
@@ -51,33 +28,21 @@ async function syncBookmarks(
 export function BookmarkSyncer() {
   const clearUpdateQueue = useBookmarkStore((s) => s.clearUpdateQueue);
   const removeUpdateItem = useBookmarkStore((s) => s.removeUpdateItem);
-  const url = useBackendUrl();
+  const convexAuth = useConvexAuth();
 
-  // when booting for the first time, clear update queue.
-  // we dont want to process persisted update items
   useEffect(() => {
     clearUpdateQueue();
   }, [clearUpdateQueue]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      (async () => {
-        if (!url) return;
-        const state = useBookmarkStore.getState();
-        const user = useAuthStore.getState();
-        await syncBookmarks(
-          state.updateQueue,
-          removeUpdateItem,
-          url,
-          user.account,
-        );
-      })();
+      if (!convexAuth.isAuthenticated) return;
+      const state = useBookmarkStore.getState();
+      syncBookmarks(state.updateQueue, removeUpdateItem);
     }, syncIntervalMs);
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, [removeUpdateItem, url]);
+    return () => clearInterval(interval);
+  }, [removeUpdateItem, convexAuth.isAuthenticated]);
 
   return null;
 }

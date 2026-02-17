@@ -1,7 +1,9 @@
 import { Listbox } from "@headlessui/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAsync } from "react-use";
 
+import { listContinueWatching } from "@frontend/api";
 import { EditButton } from "@/components/buttons/EditButton";
 import { Dropdown, OptionItem } from "@/components/form/Dropdown";
 import { Icon, Icons } from "@/components/Icon";
@@ -52,26 +54,55 @@ export function WatchingCarousel({
 
   const { isMobile } = useIsMobile();
 
-  const itemsLength = useProgressStore((state) => {
-    return Object.entries(state.items).filter(
-      (entry) => shouldShowProgress(entry[1]).show,
-    ).length;
-  });
-
   const progressItems = useProgressStore((state) => state.items);
+  const [remoteRows, setRemoteRows] = useState<any[]>([]);
+
+  useAsync(async () => {
+    const rows = await listContinueWatching();
+    setRemoteRows(Array.isArray(rows) ? rows : []);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      listContinueWatching()
+        .then((rows) => setRemoteRows(Array.isArray(rows) ? rows : []))
+        .catch(() => undefined);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const items = useMemo(() => {
     const output: MediaItem[] = [];
+    const remoteKeys = new Set(
+      remoteRows.map((row) =>
+        row.mediaType === "movie"
+          ? row.tmdbId
+          : `${row.tmdbId}::${row.episodeId ?? ""}`,
+      ),
+    );
+
     Object.entries(progressItems)
       .filter((entry) => shouldShowProgress(entry[1]).show)
       .forEach((entry) => {
-        output.push({
-          id: entry[0],
-          ...entry[1],
-        });
+        const media = entry[1];
+
+        if (media.type === "movie") {
+          if (!remoteKeys.has(entry[0])) return;
+          output.push({ id: entry[0], ...media });
+          return;
+        }
+
+        const hasRemoteEpisode = Object.values(media.episodes).some((episode) =>
+          remoteKeys.has(`${entry[0]}::${episode.id}`),
+        );
+        if (!hasRemoteEpisode) return;
+
+        output.push({ id: entry[0], ...media });
       });
     return sortMediaItems(output, sortBy, undefined, progressItems);
-  }, [progressItems, sortBy]);
+  }, [progressItems, remoteRows, sortBy]);
+
+  const itemsLength = items.length;
 
   const handleWheel = (e: React.WheelEvent) => {
     if (isScrolling) return;

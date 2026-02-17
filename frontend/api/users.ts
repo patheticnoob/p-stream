@@ -17,3 +17,8 @@ export async function updateCurrentUserProfile(input: {
 }) {
   return requireConvexClient().mutation("users:updateProfile" as any, input);
 }
+
+
+export async function updateGroupOrderConvex(groupOrder: string[]) {
+  return requireConvexClient().mutation("users:updateGroupOrder" as any, { groupOrder } as any);
+}
