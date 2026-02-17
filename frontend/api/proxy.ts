@@ -15,6 +15,8 @@ const HOST_TARGET_MAP: Record<string, string> = {
   "www.imdb.com": "imdb",
   "www.rottentomatoes.com": "rottenTomatoes",
   "fed-trailers.pstream.mov": "fedTrailers",
+  "fed-api.pstream.mov": "fedApi",
+  "api.real-debrid.com": "realDebrid",
   "rest.opensubtitles.org": "opensubtitles",
   "fed-subs.pstream.mov": "febboxSubtitles",
   "sub.vdrk.site": "vdrkSubtitles",

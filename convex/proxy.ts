@@ -46,6 +46,14 @@ const TARGETS: Record<string, ProxyTargetConfig> = {
     baseUrl: "https://fed-trailers.pstream.mov",
     methods: ["GET"],
   },
+  fedApi: {
+    baseUrl: "https://fed-api.pstream.mov",
+    methods: ["GET"],
+  },
+  realDebrid: {
+    baseUrl: "https://api.real-debrid.com",
+    methods: ["GET"],
+  },
   opensubtitles: {
     baseUrl: "https://rest.opensubtitles.org",
     methods: ["GET"],
