@@ -5,3 +5,4 @@ export * from "./streams";
 export * from "./users";
 export * from "./watchProgress";
 export * from "./favorites";
+export * from "./settings";

@@ -109,9 +109,21 @@ function coerceUndefined(value: string | null | undefined): string | undefined {
   return value;
 }
 
+const WINDOW_CONFIG_ALLOWED_KEYS: Array<keyof Config> = [
+  "DMCA_EMAIL",
+  "NORMAL_ROUTER",
+  "DISALLOWED_IDS",
+  "BANNER_MESSAGE",
+  "BANNER_ID",
+  "SHOW_SUPPORT_BAR",
+  "SUPPORT_BAR_VALUE",
+];
+
 // loads from different locations, in order: environment (VITE_{KEY}), window (public/config.js)
 function getKeyValue(key: keyof Config): string | undefined {
-  const windowValue = (window as any)?.__CONFIG__?.[`VITE_${key}`];
+  const windowValue = WINDOW_CONFIG_ALLOWED_KEYS.includes(key)
+    ? (window as any)?.__CONFIG__?.[`VITE_${key}`]
+    : undefined;
 
   return coerceUndefined(env[key]) ?? coerceUndefined(windowValue) ?? undefined;
 }

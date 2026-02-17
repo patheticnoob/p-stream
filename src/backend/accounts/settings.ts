@@ -74,6 +74,55 @@ export interface SettingsResponse {
   keyboardShortcuts?: KeyboardShortcuts;
 }
 
+const ALLOWED_SETTINGS_KEYS: Array<keyof SettingsResponse> = [
+  "applicationTheme",
+  "applicationLanguage",
+  "defaultSubtitleLanguage",
+  "proxyUrls",
+  "febboxKey",
+  "debridToken",
+  "debridService",
+  "enableThumbnails",
+  "enableAutoplay",
+  "enableSkipCredits",
+  "enableDiscover",
+  "enableFeatured",
+  "enableDetailsModal",
+  "enableImageLogos",
+  "enableCarouselView",
+  "enableMinimalCards",
+  "forceCompactEpisodeView",
+  "sourceOrder",
+  "enableSourceOrder",
+  "lastSuccessfulSource",
+  "enableLastSuccessfulSource",
+  "embedOrder",
+  "enableEmbedOrder",
+  "proxyTmdb",
+  "enableLowPerformanceMode",
+  "enableNativeSubtitles",
+  "enableHoldToBoost",
+  "homeSectionOrder",
+  "manualSourceSelection",
+  "enableDoubleClickToSeek",
+  "enableAutoResumeOnPlaybackError",
+  "keyboardShortcuts",
+];
+
+export function sanitizeSettingsResponse(input: unknown): SettingsResponse {
+  if (!input || typeof input !== "object") return {};
+  const raw = input as Record<string, unknown>;
+  const clean: SettingsResponse = {};
+
+  for (const key of ALLOWED_SETTINGS_KEYS) {
+    if (key in raw) {
+      clean[key] = raw[key] as any;
+    }
+  }
+
+  return clean;
+}
+
 export function updateSettings(
   url: string,
   account: AccountWithToken,
@@ -92,5 +141,5 @@ export function getSettings(url: string, account: AccountWithToken) {
     method: "GET",
     baseURL: url,
     headers: getAuthHeaders(account.token),
-  });
+  }).then(sanitizeSettingsResponse);
 }

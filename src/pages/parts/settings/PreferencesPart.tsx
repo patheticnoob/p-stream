@@ -1,14 +1,10 @@
 import classNames from "classnames";
-import { useMemo } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-import { getAllProviders, getProviders } from "@/backend/providers/providers";
 import { Button } from "@/components/buttons/Button";
 import { Toggle } from "@/components/buttons/Toggle";
 import { FlagIcon } from "@/components/FlagIcon";
 import { Dropdown } from "@/components/form/Dropdown";
-import { SortableList } from "@/components/form/SortableList";
 import { Heading1 } from "@/components/utils/Text";
 import { appLanguageOptions } from "@/setup/i18n";
 import { useOverlayStack } from "@/stores/interface/overlayStack";
@@ -24,10 +20,6 @@ export function PreferencesPart(props: {
   setEnableAutoplay: (v: boolean) => void;
   enableSkipCredits: boolean;
   setEnableSkipCredits: (v: boolean) => void;
-  sourceOrder: string[];
-  setSourceOrder: (v: string[]) => void;
-  enableSourceOrder: boolean;
-  setenableSourceOrder: (v: boolean) => void;
   enableLastSuccessfulSource: boolean;
   setEnableLastSuccessfulSource: (v: boolean) => void;
   enableLowPerformanceMode: boolean;
@@ -58,19 +50,6 @@ export function PreferencesPart(props: {
   const selected = options.find(
     (item) => item.id === getLocaleInfo(props.language)?.code,
   );
-
-  const allSources = getAllProviders().listSources();
-
-  const sourceItems = useMemo(() => {
-    const currentDeviceSources = getProviders().listSources();
-    return props.sourceOrder.map((id) => ({
-      id,
-      name: allSources.find((s) => s.id === id)?.name || id,
-      disabled: !currentDeviceSources.find((s) => s.id === id),
-    }));
-  }, [props.sourceOrder, allSources]);
-
-  const navigate = useNavigate();
 
   const handleLowPerformanceModeToggle = () => {
     props.setEnableLowPerformanceMode(!props.enableLowPerformanceMode);
@@ -325,54 +304,6 @@ export function PreferencesPart(props: {
                 </p>
               </div>
             </div>
-
-            <p className="text-white font-bold">
-              {t("settings.preferences.sourceOrder")}
-            </p>
-            <div className="max-w-[25rem] font-medium">
-              <Trans
-                i18nKey="settings.preferences.sourceOrderDescription"
-                components={{
-                  bold: (
-                    <span
-                      className="text-type-link font-bold cursor-pointer"
-                      onClick={() => navigate("/onboarding/extension")}
-                    />
-                  ),
-                }}
-              />
-              <div
-                onClick={() =>
-                  props.setenableSourceOrder(!props.enableSourceOrder)
-                }
-                className="bg-dropdown-background hover:bg-dropdown-hoverBackground select-none my-4 cursor-pointer space-x-3 flex items-center max-w-[25rem] py-3 px-4 rounded-lg"
-              >
-                <Toggle enabled={props.enableSourceOrder} />
-                <p className="flex-1 text-white font-bold">
-                  {t("settings.preferences.sourceOrderEnableLabel")}
-                </p>
-              </div>
-            </div>
-
-            {props.enableSourceOrder && (
-              <div className="w-full flex flex-col gap-4">
-                <SortableList
-                  items={sourceItems}
-                  setItems={(items) =>
-                    props.setSourceOrder(items.map((item) => item.id))
-                  }
-                />
-                <Button
-                  className="max-w-[25rem]"
-                  theme="secondary"
-                  onClick={() =>
-                    props.setSourceOrder(allSources.map((s) => s.id))
-                  }
-                >
-                  {t("settings.reset")}
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       </div>

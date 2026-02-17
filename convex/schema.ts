@@ -21,6 +21,26 @@ export default defineSchema({
       icon: v.string(),
     }),
     groupOrder: v.optional(v.array(v.string())),
+    safeSettings: v.optional(
+      v.object({
+        language: v.optional(v.string()),
+        theme: v.optional(v.union(v.string(), v.null())),
+        autoplay: v.optional(v.boolean()),
+        subtitles: v.optional(
+          v.object({
+            language: v.optional(v.string()),
+            native: v.optional(v.boolean()),
+          }),
+        ),
+        accessibility: v.optional(
+          v.object({
+            lowPerformanceMode: v.optional(v.boolean()),
+            holdToBoost: v.optional(v.boolean()),
+            doubleClickToSeek: v.optional(v.boolean()),
+          }),
+        ),
+      }),
+    ),
     currentDevice: v.optional(
       v.object({
         deviceId: v.string(),
@@ -53,11 +73,21 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_media", ["userId", "mediaType", "tmdbId"])
-    .index("by_user_media_episode", ["userId", "mediaType", "tmdbId", "seasonId", "episodeId"]),
+    .index("by_user_media_episode", [
+      "userId",
+      "mediaType",
+      "tmdbId",
+      "seasonId",
+      "episodeId",
+    ]),
   watchHistory: defineTable({
     userId: v.id("users"),
     ...mediaIdentity,
-    event: v.union(v.literal("play"), v.literal("resume"), v.literal("complete")),
+    event: v.union(
+      v.literal("play"),
+      v.literal("resume"),
+      v.literal("complete"),
+    ),
     watchedSeconds: v.optional(v.number()),
     durationSeconds: v.optional(v.number()),
     percent: v.optional(v.number()),
@@ -70,7 +100,13 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_media", ["userId", "mediaType", "tmdbId", "seasonId", "episodeId"]),
+    .index("by_user_media", [
+      "userId",
+      "mediaType",
+      "tmdbId",
+      "seasonId",
+      "episodeId",
+    ]),
   proxy: defineTable({
     key: v.string(),
     value: v.string(),

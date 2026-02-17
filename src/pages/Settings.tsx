@@ -9,7 +9,6 @@ import {
   encryptData,
 } from "@/backend/accounts/crypto";
 import { getSettings, updateSettings } from "@/backend/accounts/settings";
-import { getAllProviders } from "@/backend/providers/providers";
 import { Button } from "@/components/buttons/Button";
 import { SearchBarInput } from "@/components/form/SearchBar";
 import { ThinContainer } from "@/components/layout/ThinContainer";
@@ -199,9 +198,7 @@ export function SettingsPage() {
       ];
 
       // Map sub-section hashes to their parent categories
-      const subSectionToCategory: Record<string, string> = {
-        "source-order": "settings-preferences",
-      };
+      const subSectionToCategory: Record<string, string> = {};
 
       // Check if it's a sub-section hash
       if (subSectionToCategory[hashId]) {
@@ -247,9 +244,7 @@ export function SettingsPage() {
           "settings-captions",
           "settings-connection",
         ];
-        const subSectionToCategory: Record<string, string> = {
-          "source-order": "settings-preferences",
-        };
+        const subSectionToCategory: Record<string, string> = {};
 
         if (subSectionToCategory[hashId]) {
           const categoryId = subSectionToCategory[hashId];
@@ -589,22 +584,6 @@ export function SettingsPage() {
     enableAutoResumeOnPlaybackError,
   );
 
-  const availableSources = useMemo(() => {
-    const sources = getAllProviders().listSources();
-    const sourceIDs = sources.map((s) => s.id);
-    const stateSources = state.sourceOrder.state || [];
-
-    // Filter out sources that are not in `stateSources` and are in `sources`
-    const updatedSources = stateSources.filter((ss) => sourceIDs.includes(ss));
-
-    // Add sources from `sources` that are not in `stateSources`
-    const missingSources = sources
-      .filter((s) => !stateSources.includes(s.id))
-      .map((s) => s.id);
-
-    return [...updatedSources, ...missingSources];
-  }, [state.sourceOrder.state]);
-
   useEffect(() => {
     setPreviewTheme(activeTheme ?? "default");
   }, [setPreviewTheme, activeTheme]);
@@ -869,10 +848,6 @@ export function SettingsPage() {
               setEnableAutoplay={state.enableAutoplay.set}
               enableSkipCredits={state.enableSkipCredits.state}
               setEnableSkipCredits={state.enableSkipCredits.set}
-              sourceOrder={availableSources}
-              setSourceOrder={state.sourceOrder.set}
-              enableSourceOrder={state.enableSourceOrder.state}
-              setenableSourceOrder={state.enableSourceOrder.set}
               enableLastSuccessfulSource={
                 state.enableLastSuccessfulSource.state
               }
@@ -939,18 +914,12 @@ export function SettingsPage() {
           selectedCategory === "settings-connection") && (
           <div id="settings-connection">
             <ConnectionsPart
-              backendUrl={state.backendUrl.state}
-              setBackendUrl={state.backendUrl.set}
-              proxyUrls={state.proxyUrls.state}
-              setProxyUrls={state.proxyUrls.set}
               febboxKey={state.febboxKey.state}
               setFebboxKey={state.febboxKey.set}
               debridToken={state.debridToken.state}
               setdebridToken={state.debridToken.set}
               debridService={state.debridService.state}
               setdebridService={state.debridService.set}
-              proxyTmdb={state.proxyTmdb.state}
-              setProxyTmdb={state.proxyTmdb.set}
             />
           </div>
         )}

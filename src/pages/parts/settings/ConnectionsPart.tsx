@@ -62,7 +62,7 @@ interface DebridProps {
   mode?: "onboarding" | "settings";
 }
 
-function ProxyEdit({
+function _ProxyEdit({
   proxyUrls,
   setProxyUrls,
   proxyTmdb,
@@ -182,7 +182,7 @@ function ProxyEdit({
   );
 }
 
-function BackendEdit({ backendUrl, setBackendUrl }: BackendEditProps) {
+function _BackendEdit({ backendUrl, setBackendUrl }: BackendEditProps) {
   const { t } = useTranslation();
   const user = useAuthStore();
   const config = conf();
@@ -725,25 +725,13 @@ export function DebridEdit({
   return null;
 }
 
-export function ConnectionsPart(
-  props: BackendEditProps & ProxyEditProps & FebboxKeyProps & DebridProps,
-) {
+export function ConnectionsPart(props: FebboxKeyProps & DebridProps) {
   const { t } = useTranslation();
   return (
     <div>
       <Heading1 border>{t("settings.connections.title")}</Heading1>
       <div className="space-y-6">
         <SetupPart /> {/* I was wondering what happened to this badddev >:( */}
-        <ProxyEdit
-          proxyUrls={props.proxyUrls}
-          setProxyUrls={props.setProxyUrls}
-          proxyTmdb={props.proxyTmdb}
-          setProxyTmdb={props.setProxyTmdb}
-        />
-        <BackendEdit
-          backendUrl={props.backendUrl}
-          setBackendUrl={props.setBackendUrl}
-        />
         <FebboxSetup
           febboxKey={props.febboxKey}
           setFebboxKey={props.setFebboxKey}
